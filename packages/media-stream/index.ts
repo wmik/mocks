@@ -1,33 +1,85 @@
+import { MediaStreamTrack } from '@mocks/media-stream-track';
+
+const trackSet: Record<string, MediaStreamTrack> = {};
+
+function uuid() {
+  return [
+    Math.random().toString(16).substring(2, 10),
+    Math.random().toString(16).substring(2, 6),
+    Math.random().toString(16).substring(2, 6),
+    Math.random().toString(16).substring(2, 6),
+    Math.random().toString(16).substring(2, 14)
+  ].join('-');
+}
+
+type Track = InstanceType<typeof MediaStreamTrack>;
+type TrackList = Track[];
+type Handler = (e: Event) => void;
+
 export class MediaStream extends EventTarget {
   active: boolean;
   id: string;
   onactive: null;
-  onaddtrack: null;
+  onaddtrack: Handler | null;
   oninactive: null;
-  onremovetrack: null;
+  onremovetrack: Handler | null;
 
-  constructor() {
+  constructor(streamOrTracks: MediaStream | TrackList) {
     super();
 
     this.active = true;
-    this.id = Math.random().toString(16).substring(2);
+    this.id = uuid();
     this.onactive = null;
     this.onaddtrack = null;
     this.oninactive = null;
     this.onremovetrack = null;
   }
 
-  addTrack() {}
+  addTrack(track: Track) {
+    trackSet[uuid()] = track;
 
-  clone() {}
+    let event = new Event('addtrack');
 
-  getAudioTracks() {}
+    this.dispatchEvent(event);
 
-  getTrackById() {}
+    if (typeof this.onaddtrack === 'function') {
+      this.onaddtrack(event);
+    }
+  }
 
-  getTracks() {}
+  clone() {
+    return new MediaStream(this.getTracks());
+  }
 
-  getVideoTracks() {}
+  getAudioTracks() {
+    return (
+      Object.values(trackSet).filter(track => track.kind === 'audio') ?? []
+    );
+  }
 
-  removeTrack() {}
+  getTrackById(id: string) {
+    return trackSet[id];
+  }
+
+  getTracks() {
+    return Object.values(trackSet) ?? [];
+  }
+
+  getVideoTracks() {
+    return (
+      Object.values(trackSet).filter(track => track.kind === 'video') ?? []
+    );
+  }
+
+  removeTrack(track: Track) {
+    delete trackSet[track?.id];
+
+    let event = new Event('removetrack');
+
+    this.dispatchEvent(event);
+
+    if (typeof this.onremovetrack === 'function') {
+      this.onremovetrack(event);
+    }
+  }
 }
